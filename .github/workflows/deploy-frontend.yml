@@ -1,23 +1,49 @@
-name: Deploy Frontend
+name: Frontend CI/CD - AWS S3 Deploy
+
 on:
   push:
     branches: [ main ]
+
+env:
+  AWS_REGION: ap-south-1
+
 jobs:
-  deploy:
+  build-deploy:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
-      - run: |
-          cd myapp-frontend
-          npm ci
-          VITE_API_URL=${{ secrets.API_URL }} npm run build
-      - uses: aws-actions/configure-aws-credentials@v2
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
-      - run: aws s3 sync myapp-frontend/dist/ s3://my-frontend-todo-app/ --delete
-      - run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_DIST_ID }} --paths "/*"
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy build folder to S3
+        run: |
+      - name: Invalidate CloudFront (optional)
+        if: ${{ env.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"

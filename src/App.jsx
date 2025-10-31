@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+const API_BASE = "http://65.0.106.245:3000/api" || "/api";
 
 export default function App() {
   const [todos, setTodos] = useState([]);
